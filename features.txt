@@ -1,0 +1,39 @@
+Admin: 
+	- Cadastrar planos
+	- Exportar senhas criptografadas (para colocar na catraca)
+	- Relatorio de entrada/saida dos usuários
+	- Conceder plano gratuitamente
+	- Dashboard
+	- Postar no mural
+	
+Personal:
+	- Cadastrar aulas
+		- CRUD de temas
+		- Consultar alunos que vao ir na aula
+	- Montar treinos
+		- CRUD de exercícios
+	- Postar no mural
+	
+Suporte:
+	- Responder suportes
+	- Postar no mural
+	
+Usuário:
+	- Comprar planos
+		- Trocar de plano
+		- Histórico de pagamentos
+	- Ver mural
+	- Agendar aulas
+	- Consultar treinos
+	- Pedir suporte
+	- Configurações
+		# O Usuário tem também um código aleatório para entrar na academia
+		{
+		- gerar novo código aleatório
+			OU
+		- Cadastrar biometria facil
+		}
+		- alterar senha
+		
+API:
+	- Rota de verificar código aleatório OU BIOMETRIA
