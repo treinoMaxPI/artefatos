@@ -21,6 +21,17 @@ public void gerarNovasCobrancasEAtualizarPlanoUsuario(LocalDateTime now) {
     log.info("Finalizada geração de novas cobranças");
 }
 
+ANÁLISE DE COMPLEXIDADE:
+- Complexidade de Tempo: O(n)
+  Onde n é o número total de cobranças a serem processadas. A função itera sobre todas
+  as páginas de resultados (do-while) e para cada página processa todos os elementos (for).
+  O número de iterações do loop externo é n/batchSize e o loop interno processa batchSize
+  elementos, resultando em O(n) total.
+
+- Complexidade de Espaço: O(batchSize)
+  A função mantém em memória apenas uma página de resultados por vez, com tamanho máximo
+  definido por batchSize. Não há acúmulo de dados em memória durante o processamento.
+
 2) Processar Inadimplencias
 @Transactional
 public void processarInadimplencias(LocalDateTime now) {
@@ -31,7 +42,7 @@ public void processarInadimplencias(LocalDateTime now) {
     do {
         page = planoCobrancaRepository.findVencidasNaoProcessadas(localDateNow, pageRequest);
         log.info("Processando {} cobranças vencidas não processadas", page.getNumberOfElements());
-        
+
         for (PlanoCobranca cobranca: page.getContent()) {
             planoUsuarioService.processarInadimplencia(cobranca);
         }
@@ -41,12 +52,24 @@ public void processarInadimplencias(LocalDateTime now) {
     log.info("Finalizado processamento de inadimplências");
 }
 
-3) Função utilitaria para ver se usuario tem uma entre algumas roles  
+ANÁLISE DE COMPLEXIDADE:
+- Complexidade de Tempo: O(n)
+  Onde n é o número total de cobranças vencidas a serem processadas. Similar à função anterior,
+  utiliza paginação para processar os registros em lotes. O loop externo itera sobre as páginas
+  (n/batchSize iterações) e o loop interno processa cada cobrança da página (batchSize elementos),
+  resultando em complexidade linear O(n).
+
+- Complexidade de Espaço: O(batchSize)
+  Mantém em memória apenas uma página de resultados por vez. O uso de paginação garante que
+  o consumo de memória seja constante e limitado ao tamanho do lote (batchSize), independente
+  do número total de inadimplências a processar.
+
+3) Função utilitaria para ver se usuario tem uma entre algumas roles
 public static boolean hasAnyRole(Role... roles) {
     Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
             .getAuthentication()
             .getAuthorities();
-    
+
     for (Role role : roles) {
         if (authorities.contains(new SimpleGrantedAuthority("ROLE_" + role.name()))) {
             return true;
@@ -55,12 +78,24 @@ public static boolean hasAnyRole(Role... roles) {
     return false;
 }
 
+ANÁLISE DE COMPLEXIDADE:
+- Complexidade de Tempo: O(n * m)
+  Onde n é o número de roles fornecidos como parâmetro e m é o número de authorities que
+  o usuário possui. Para cada role (n iterações), é feita uma verificação na coleção de
+  authorities usando o método contains(), que tem complexidade O(m) para uma Collection
+  genérica. No melhor caso, a função retorna true na primeira iteração: O(m). No pior caso,
+  verifica todas as roles: O(n * m).
+
+- Complexidade de Espaço: O(1)
+  A função não aloca estruturas de dados adicionais proporcionais à entrada. Apenas
+  armazena referências e objetos temporários de tamanho fixo.
+
 4) Função utilitaria que verificar se usuario tem todas as roles dentro de uma lista de roles
 public static boolean hasAllRoles(Role... roles) {
     Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
             .getAuthentication()
             .getAuthorities();
-    
+
     for (Role role : roles) {
         if (!authorities.contains(new SimpleGrantedAuthority("ROLE_" + role.name()))) {
             return false;
@@ -68,6 +103,18 @@ public static boolean hasAllRoles(Role... roles) {
     }
     return true;
 }
+
+ANÁLISE DE COMPLEXIDADE:
+- Complexidade de Tempo: O(n * m)
+  Onde n é o número de roles fornecidos como parâmetro e m é o número de authorities do
+  usuário. A estrutura é similar à função hasAnyRole, mas com lógica inversa. Para cada
+  role (n iterações), verifica se ela existe na coleção de authorities usando contains(),
+  que tem complexidade O(m). No melhor caso, encontra uma role ausente logo na primeira
+  iteração: O(m). No pior caso, todas as roles estão presentes: O(n * m).
+
+- Complexidade de Espaço: O(1)
+  Não há alocação de estruturas de dados proporcionais ao tamanho da entrada. Utiliza
+  apenas variáveis locais e objetos temporários de tamanho constante.
 
 5) Retorno de Cobranças do usuario mapeadas em DTO
 @GetMapping
@@ -78,4 +125,18 @@ public ResponseEntity<Page<PlanoCobrancaCustomerResponse>> getCustomerCobrancas(
             .map(PlanoCobrancaCustomerResponse::fromEntity);
     return ResponseEntity.ok(cobrancas);
 }
+
+ANÁLISE DE COMPLEXIDADE:
+- Complexidade de Tempo: O(p + q)
+  Onde p é o tamanho da página retornada pelo repository (número de elementos) e q é a
+  complexidade da consulta ao banco de dados (findCobrancasByUsuarioId). A operação map()
+  itera sobre todos os elementos da página, aplicando a transformação fromEntity() em
+  cada um, resultando em O(p). A complexidade total depende da implementação do repository,
+  mas geralmente é O(q + p), onde q pode envolver índices de banco de dados para otimizar
+  a busca.
+
+- Complexidade de Espaço: O(p)
+  A função cria uma nova Page contendo objetos PlanoCobrancaCustomerResponse mapeados a
+  partir das entidades originais. O espaço necessário é proporcional ao tamanho da página,
+  mantendo simultaneamente em memória tanto os objetos originais quanto os DTOs mapeados.
 
