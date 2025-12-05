@@ -1,0 +1,202 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{margin=2.5cm}
+
+% Configuração de cores para código
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Configuração do listings para Java
+\lstdefinestyle{javastyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    language=Java
+}
+
+\lstset{style=javastyle}
+
+\title{\textbf{Análise de Complexidade de Funções do Sistema}}
+\author{Kaique Bahmad \and Augusto de Morais \and Marcos Antonio \and Ruan Pablo}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Função 1: Gerar Novas Cobranças e Atualizar Plano}
+
+\subsection{Código}
+\begin{lstlisting}
+@Transactional
+public void gerarNovasCobrancasEAtualizarPlanoUsuario(LocalDateTime now) {
+    log.info("Iniciando geracao de novas cobrancas em {}", now);
+    Pageable pageRequest = PageRequest.of(0, batchSize);
+    Page<PlanoCobranca> page;
+    LocalDate localDateNow = now.toLocalDate();
+    do {
+        page = planoCobrancaRepository.findPagasComProximaNaoGerada(
+            localDateNow, pageRequest);
+        log.info("Processando {} cobrancas pagas com proxima nao gerada",
+            page.getNumberOfElements());
+
+        for (PlanoCobranca cobranca: page.getContent()) {
+            planoUsuarioService.gerarProximaCobranca(cobranca);
+        }
+
+        pageRequest = pageRequest.next();
+    } while (!page.isLast());
+    log.info("Finalizada geracao de novas cobrancas");
+}
+\end{lstlisting}
+
+\subsection{Análise de Complexidade}
+\textbf{Complexidade de Tempo:} $O(n)$
+
+Onde $n$ é o número total de cobranças a serem processadas. A função itera sobre todas as páginas de resultados (do-while) e para cada página processa todos os elementos (for). O número de iterações do loop externo é $\frac{n}{\text{batchSize}}$ e o loop interno processa \texttt{batchSize} elementos, resultando em $O(n)$ total.
+
+\newpage
+
+\section{Função 2: Processar Inadimplências}
+
+\subsection{Código}
+\begin{lstlisting}
+@Transactional
+public void processarInadimplencias(LocalDateTime now) {
+    log.info("Iniciando processamento de inadimplencias em {}", now);
+    Pageable pageRequest = PageRequest.of(0, batchSize);
+    Page<PlanoCobranca> page;
+    LocalDate localDateNow = now.toLocalDate();
+    do {
+        page = planoCobrancaRepository.findVencidasNaoProcessadas(
+            localDateNow, pageRequest);
+        log.info("Processando {} cobrancas vencidas nao processadas",
+            page.getNumberOfElements());
+
+        for (PlanoCobranca cobranca: page.getContent()) {
+            planoUsuarioService.processarInadimplencia(cobranca);
+        }
+
+        pageRequest = pageRequest.next();
+    } while (!page.isLast());
+    log.info("Finalizado processamento de inadimplencias");
+}
+\end{lstlisting}
+
+\subsection{Análise de Complexidade}
+\textbf{Complexidade de Tempo:} $O(n)$
+
+Onde $n$ é o número total de cobranças vencidas a serem processadas. Similar à função anterior, utiliza paginação para processar os registros em lotes. O loop externo itera sobre as páginas ($\frac{n}{\text{batchSize}}$ iterações) e o loop interno processa cada cobrança da página (\texttt{batchSize} elementos), resultando em complexidade linear $O(n)$.
+
+\newpage
+
+\section{Função 3: Verificar se Usuário Possui Alguma Role}
+
+\subsection{Código}
+\begin{lstlisting}
+public static boolean hasAnyRole(Role... roles) {
+    Collection<? extends GrantedAuthority> authorities =
+        SecurityContextHolder.getContext()
+            .getAuthentication()
+            .getAuthorities();
+
+    for (Role role : roles) {
+        if (authorities.contains(
+            new SimpleGrantedAuthority("ROLE_" + role.name()))) {
+            return true;
+        }
+    }
+    return false;
+}
+\end{lstlisting}
+
+\subsection{Análise de Complexidade}
+\textbf{Complexidade de Tempo:} $O(n \times m)$
+
+Onde $n$ é o número de roles fornecidos como parâmetro e $m$ é o número de authorities que o usuário possui. Para cada role ($n$ iterações), é feita uma verificação na coleção de authorities usando o método \texttt{contains()}, que tem complexidade $O(m)$ para uma \texttt{Collection} genérica.
+
+\textbf{Melhor caso:} A função retorna \texttt{true} na primeira iteração: $O(m)$.
+
+\textbf{Pior caso:} Verifica todas as roles: $O(n \times m)$.
+
+\newpage
+
+\section{Função 4: Verificar se Usuário Possui Todas as Roles}
+
+\subsection{Código}
+\begin{lstlisting}
+public static boolean hasAllRoles(Role... roles) {
+    Collection<? extends GrantedAuthority> authorities =
+        SecurityContextHolder.getContext()
+            .getAuthentication()
+            .getAuthorities();
+
+    for (Role role : roles) {
+        if (!authorities.contains(
+            new SimpleGrantedAuthority("ROLE_" + role.name()))) {
+            return false;
+        }
+    }
+    return true;
+}
+\end{lstlisting}
+
+\subsection{Análise de Complexidade}
+\textbf{Complexidade de Tempo:} $O(n \times m)$
+
+Onde $n$ é o número de roles fornecidos como parâmetro e $m$ é o número de authorities do usuário. A estrutura é similar à função \texttt{hasAnyRole}, mas com lógica inversa. Para cada role ($n$ iterações), verifica se ela existe na coleção de authorities usando \texttt{contains()}, que tem complexidade $O(m)$.
+
+\textbf{Melhor caso:} Encontra uma role ausente logo na primeira iteração: $O(m)$.
+
+\textbf{Pior caso:} Todas as roles estão presentes: $O(n \times m)$.
+
+\newpage
+
+\section{Função 5: Retornar Cobranças do Usuário Mapeadas em DTO}
+
+\subsection{Código}
+\begin{lstlisting}
+@GetMapping
+@PreAuthorize("hasAnyRole('CUSTOMER')")
+public ResponseEntity<Page<PlanoCobrancaCustomerResponse>>
+    getCustomerCobrancas(Pageable pageable) throws JsonProcessingException {
+
+    Page<PlanoCobrancaCustomerResponse> cobrancas =
+        planoCobrancaService.findCobrancasByUsuarioId(
+            SecurityUtils.getCurrentUserId(), pageable)
+            .map(PlanoCobrancaCustomerResponse::fromEntity);
+
+    return ResponseEntity.ok(cobrancas);
+}
+\end{lstlisting}
+
+\subsection{Análise de Complexidade}
+\textbf{Complexidade de Tempo:} $O(p + q)$
+
+Onde $p$ é o tamanho da página retornada pelo repository (número de elementos) e $q$ é a complexidade da consulta ao banco de dados (\texttt{findCobrancasByUsuarioId}). A operação \texttt{map()} itera sobre todos os elementos da página, aplicando a transformação \texttt{fromEntity()} em cada um, resultando em $O(p)$. A complexidade total depende da implementação do repository, mas geralmente é $O(q + p)$, onde $q$ pode envolver índices de banco de dados para otimizar a busca.
+
+\end{document}

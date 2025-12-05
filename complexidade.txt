@@ -1,4 +1,7 @@
-Analise de complexidade de funções do sistema:
+Analise de complexidade de funções do sistema
+
+Autores: Kaique Bahmad, Augusto de Morais, Marcos Antonio, Ruan Pablo
+================================================================================
 
 
 1) Gerar novas cobrancas e atualizar plano
@@ -28,10 +31,6 @@ ANÁLISE DE COMPLEXIDADE:
   O número de iterações do loop externo é n/batchSize e o loop interno processa batchSize
   elementos, resultando em O(n) total.
 
-- Complexidade de Espaço: O(batchSize)
-  A função mantém em memória apenas uma página de resultados por vez, com tamanho máximo
-  definido por batchSize. Não há acúmulo de dados em memória durante o processamento.
-
 2) Processar Inadimplencias
 @Transactional
 public void processarInadimplencias(LocalDateTime now) {
@@ -59,11 +58,6 @@ ANÁLISE DE COMPLEXIDADE:
   (n/batchSize iterações) e o loop interno processa cada cobrança da página (batchSize elementos),
   resultando em complexidade linear O(n).
 
-- Complexidade de Espaço: O(batchSize)
-  Mantém em memória apenas uma página de resultados por vez. O uso de paginação garante que
-  o consumo de memória seja constante e limitado ao tamanho do lote (batchSize), independente
-  do número total de inadimplências a processar.
-
 3) Função utilitaria para ver se usuario tem uma entre algumas roles
 public static boolean hasAnyRole(Role... roles) {
     Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
@@ -85,10 +79,6 @@ ANÁLISE DE COMPLEXIDADE:
   authorities usando o método contains(), que tem complexidade O(m) para uma Collection
   genérica. No melhor caso, a função retorna true na primeira iteração: O(m). No pior caso,
   verifica todas as roles: O(n * m).
-
-- Complexidade de Espaço: O(1)
-  A função não aloca estruturas de dados adicionais proporcionais à entrada. Apenas
-  armazena referências e objetos temporários de tamanho fixo.
 
 4) Função utilitaria que verificar se usuario tem todas as roles dentro de uma lista de roles
 public static boolean hasAllRoles(Role... roles) {
@@ -112,10 +102,6 @@ ANÁLISE DE COMPLEXIDADE:
   que tem complexidade O(m). No melhor caso, encontra uma role ausente logo na primeira
   iteração: O(m). No pior caso, todas as roles estão presentes: O(n * m).
 
-- Complexidade de Espaço: O(1)
-  Não há alocação de estruturas de dados proporcionais ao tamanho da entrada. Utiliza
-  apenas variáveis locais e objetos temporários de tamanho constante.
-
 5) Retorno de Cobranças do usuario mapeadas em DTO
 @GetMapping
 @PreAuthorize("hasAnyRole('CUSTOMER')")
@@ -134,9 +120,4 @@ ANÁLISE DE COMPLEXIDADE:
   cada um, resultando em O(p). A complexidade total depende da implementação do repository,
   mas geralmente é O(q + p), onde q pode envolver índices de banco de dados para otimizar
   a busca.
-
-- Complexidade de Espaço: O(p)
-  A função cria uma nova Page contendo objetos PlanoCobrancaCustomerResponse mapeados a
-  partir das entidades originais. O espaço necessário é proporcional ao tamanho da página,
-  mantendo simultaneamente em memória tanto os objetos originais quanto os DTOs mapeados.
 
